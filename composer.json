@@ -1,0 +1,21 @@
+{
+    "name": "simplercode/contentable",
+    "description": "Library for reading data from filesystem in a convenient way",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^5.4"
+    },
+    "autoload": {
+        "psr-0": {
+            "Contentable": "lib"
+        }
+    },
+    "authors": [
+        {
+            "name": "emcode",
+            "email": "michal@simplercode.com"
+        }
+    ],
+    "require": {}
+}
