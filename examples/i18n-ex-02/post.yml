@@ -1,0 +1,18 @@
+label: Post
+path: post
+components:
+  content:
+    path: %lang%/%slug%/content.md
+  teaser:
+    path: %lang%/%slug%/teaser.md
+  meta:
+    path: %lang%/%slug%/meta.yml
+    fields:
+      title:
+        nullable: false
+      published:
+        nullable: false
+      updated:
+        nullable: false
+      tags:
+        nullable: true

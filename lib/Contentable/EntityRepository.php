@@ -8,11 +8,6 @@ use Contentable\Driver\DriverInterface;
 class EntityRepository
 {
     /**
-     * @var ContentTypeInterface
-     */
-    protected $contentType;
-
-    /**
      * @var \ArrayAccess
      */
     protected $serviceLocator;
@@ -23,41 +18,38 @@ class EntityRepository
     protected $driver;
 
     /**
-     * @param ContentTypeInterface $contentType
      * @param DriverInterface $driver
      */
-    public function __construct(ContentTypeInterface $contentType, DriverInterface $driver)
+    public function __construct(DriverInterface $driver)
     {
         $this->driver = $driver;
-        $this->setContentType($contentType);
     }
 
     public function setContentType(ContentTypeInterface $contentType)
     {
-        $this->driver->setContentType($contentType);
-        $this->contentType = $contentType;
+        return $this->driver->setContentType($contentType);
     }
 
-    public function findAll()
+    public function loadEntity(array $predicate)
     {
-        $allSlugs = $this->driver->findSlugs();
-        $allEntities = array();
+        return $this->driver->loadEntity($predicate);
+    }
 
-        foreach($allSlugs as $currentSlug)
+    public function loadEntities(array $predicate, $limit = null, $offset = 0)
+    {
+        $matchingPredicates = $this->driver->find($predicate, $limit, $offset);
+        $loadedEntities = [];
+
+        foreach($matchingPredicates as $currentPredicate)
         {
-            $allEntities[] = $this->driver->findEntity($currentSlug);
+            $loadedEntities[] = $this->driver->loadEntity($currentPredicate);
         }
 
-        return $allEntities;
+        return $loadedEntities;
     }
 
-    public function findSlugs()
+    public function find(array $predicate = null, $limit = null, $offset = 0)
     {
-        return $this->driver->findSlugs();
-    }
-
-    public function findEntity($slug)
-    {
-        return $this->driver->findEntity($slug);
+        return $this->driver->find($predicate, $limit, $offset);
     }
 }

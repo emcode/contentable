@@ -12,10 +12,10 @@ interface DriverInterface
     /**
      * @return string[]
      */
-    public function findSlugs($limit = null, $offset = 0);
+    public function find(array $predicate = null, $limit = null, $offset = 0);
 
     /**
      * @return Entity
      */
-    public function findEntity($slug);
+    public function loadEntity(array $predicate);
 }

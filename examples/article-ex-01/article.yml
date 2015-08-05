@@ -1,0 +1,18 @@
+label: Article
+path: article
+components:
+  content:
+    path: %slug%/content.md
+  teaser:
+    path: %slug%/teaser.md
+  meta:
+    path: %slug%/meta.yml
+    fields:
+      title:
+        nullable: false
+      published:
+        nullable: false
+      updated:
+        nullable: false
+      tags:
+        nullable: true

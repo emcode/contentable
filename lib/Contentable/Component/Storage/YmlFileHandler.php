@@ -4,6 +4,7 @@ namespace Contentable\Component\Storage;
 
 use Contentable\Component\Component;
 use Contentable\Component\ComponentTypeInterface;
+use Contentable\Component\Exception\SourceFileNotFoundException;
 use Contentable\Field\Field;
 use Symfony\Component\Yaml\Yaml;
 
@@ -19,7 +20,15 @@ class YmlFileHandler implements ComponentHandlerInterface
         $component = new Component();
         $component->setName($componentType->getName());
 
-        $rawString = file_get_contents($sourcePath);
+        $rawString = @file_get_contents($sourcePath);
+
+        if (false === $rawString)
+        {
+            throw new SourceFileNotFoundException(sprintf(
+                'Could not load file from path: %s', $sourcePath
+            ));
+        }
+
         $rawArray = Yaml::parse($rawString);
         $fields = array();
 

@@ -4,6 +4,7 @@ namespace Contentable\Component\Storage;
 
 use Contentable\Component\Component;
 use Contentable\Component\ComponentTypeInterface;
+use Contentable\Component\Exception\SourceFileNotFoundException;
 use Contentable\Field\Field;
 
 class TextFileHandler implements ComponentHandlerInterface
@@ -14,7 +15,14 @@ class TextFileHandler implements ComponentHandlerInterface
         $component = new Component();
         $component->setName($componentName);
 
-        $value = file_get_contents($sourcePath);
+        $value = @file_get_contents($sourcePath);
+
+        if (false === $value)
+        {
+            throw new SourceFileNotFoundException(sprintf(
+                'Could not load file from path: %s', $sourcePath
+            ));
+        }
 
         $baseField = new Field();
         $baseField->setName($fieldName);

@@ -93,15 +93,20 @@ abstract class AbstractConfigLoader implements ConfigLoaderInterface
 
        $extension = pathinfo($somePath, PATHINFO_EXTENSION);
 
-       if (!isset($this->defaultHandlerMapping[$extension]))
+       if (empty($extension))
        {
            throw new \RuntimeException(sprintf(
-               'There is no content type handler registered for "%s" file extension (extension extracted from path: "%s")',
-                $extension, $somePath
+               'Could not infer file loading handler based on file extension - extension is empty. Received path: "%s"',
+               $somePath
            ));
        }
 
-       return $this->defaultHandlerMapping[$extension];
+       if (isset($this->defaultHandlerMapping[$extension]))
+       {
+           return $this->defaultHandlerMapping[$extension];
+       }
+
+       return $extension;
     }
 
 

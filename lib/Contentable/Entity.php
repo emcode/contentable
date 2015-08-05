@@ -25,29 +25,51 @@ class Entity
     protected $components;
 
     /**
+     * @var array|null
+     */
+    protected $predicate;
+
+    /**
      * @param string $type
      */
-    public function __construct($slug, $type)
+    public function __construct($type, array $predicate = null)
     {
-        $this->slug = $slug;
+        $this->predicate = $predicate;
         $this->type = $type;
         $this->components = array();
     }
 
     /**
-     * @return string
+     * @return array|null
      */
-    public function getSlug()
+    public function getPredicate($predicatePart = null, $default = null)
     {
-        return $this->slug;
+        if (null === $this->predicate)
+        {
+            return $default;
+        }
+
+        if (null === $predicatePart)
+        {
+            return $this->predicate;
+        }
+
+        if (isset($this->predicate[$predicatePart]))
+        {
+            return $this->predicate[$predicatePart];
+        }
+
+        return $default;
     }
 
     /**
-     * @param string $slug
+     * @param array|null $predicate
+     * @return $this
      */
-    public function setSlug($slug)
+    public function setPredicate(array $predicate)
     {
-        $this->slug = $slug;
+        $this->predicate = $predicate;
+        return $this;
     }
 
     public function addComponent(Component $component)

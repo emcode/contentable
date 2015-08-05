@@ -13,12 +13,12 @@ class PhpGlobDriver implements DriverInterface
     /**
      * @var string
      */
-    protected $slugPlaceholder = '%slug%';
+    protected $tokenDelimiter = '%';
 
     /**
      * @var string
      */
-    protected $slugRegex = '[0-9a-z\-]+';
+    protected $tokenValueRegex = '[0-9a-z\-]+';
 
     /**
      * @var ContentTypeInterface
@@ -31,45 +31,103 @@ class PhpGlobDriver implements DriverInterface
     protected $baseComponent;
 
     /**
-     * string
+     * @var string[]
      */
     protected $baseComponentPathPattern;
+
+    /**
+     * @var string[]
+     */
+    protected $baseComponentPathTokens;
+
+    /**
+     * @var string
+     */
+    protected $tokenDetectionRegex = '/(\%s[a-zA-Z0-9\_]+\%s)/';
 
     /**
      * @var ComponentLoaderInterface
      */
     protected $loader;
 
-    public function __construct(ComponentLoaderInterface $componentLoader)
+    public function __construct(ContentTypeInterface $contentType, ComponentLoaderInterface $componentLoader)
     {
         $this->loader = $componentLoader;
+        $this->setContentType($contentType);
     }
 
-    public function findSlugs($limit = null, $offset = 0)
+    public function find(array $predicate = null, $limit = null, $offset = 0)
     {
-        $globPattern = str_replace($this->slugPlaceholder, '*', $this->baseComponentPathPattern);
+        $predicateTokens = $predicate ? $this->tokenize($predicate, $this->tokenDelimiter) : [];
+
+        $defaultGlobs = [];
+
+        foreach($this->baseComponentPathTokens as $token)
+        {
+            $defaultGlobs[$token] = '*';
+        }
+
+        $globs = array_merge($defaultGlobs, $predicateTokens);
+        $globPattern = strtr($this->baseComponentPathPattern, $globs);
         $regexPattern = $this->prepareComponentRegex($this->baseComponentPathPattern);
         $scanResult = glob($globPattern);
-        $slugs = [];
+
+        $findingResult = [];
 
         foreach($scanResult as $someFilePath)
         {
             $matchingResult = [];
             $regexResult = preg_match($regexPattern, $someFilePath, $matchingResult);
-            if ($regexResult) $slugs[] = $matchingResult[1];
+
+            if (!$regexResult) continue;
+
+            $resultItem = [];
+
+            foreach($this->baseComponentPathTokens as $tokenName => $tokenPattern)
+            {
+                $resultItem[$tokenName] = $matchingResult[$tokenName];
+            }
+
+            $findingResult[] = $resultItem;
         }
 
-        return $slugs;
+        return $findingResult;
     }
 
-    public function findEntity($slug)
+    protected function tokenize(array $someArray, $tokenPrefix, $tokenPostfix = null)
     {
-        $entity = new Entity($slug, $this->contentType->getName());
+        $tokenPostfix = (null === $tokenPostfix) ? $tokenPrefix : $tokenPostfix;
+        $tokens = [];
+
+        foreach($someArray as $index => $value)
+        {
+            $currentToken = $tokenPrefix . $index . $tokenPostfix;
+            $tokens[$currentToken] = $value;
+        }
+
+        return $tokens;
+    }
+
+    public function loadEntity(array $predicate)
+    {
+        $predicateTokens = $this->tokenize($predicate, $this->tokenDelimiter);
+        $missingTokens = array_diff($this->baseComponentPathTokens, array_keys($predicateTokens));
+
+        if (!empty($missingTokens))
+        {
+            throw new \RuntimeException(sprintf(
+                'Cannot load entity because of missing path token(s): %s. Pass missing key(s) in predicate array!',
+                implode(', ', $missingTokens)
+            ));
+        }
+
+        $entity = new Entity($this->contentType->getName(), $predicate);
         $componentTypes = $this->contentType->getComponentTypes();
 
         foreach($componentTypes as $componentType)
         {
-            $componentPath = $this->prepareComponentPath($slug, $componentType);
+            $pathPattern = $this->prepareComponentPathPattern($componentType);
+            $componentPath = strtr($pathPattern, $predicateTokens);
             $component = $this->loader->loadComponent($componentPath, $componentType);
             $entity->addComponent($component);
         }
@@ -82,12 +140,14 @@ class PhpGlobDriver implements DriverInterface
         $this->contentType = $contentType;
         $this->baseComponent = $contentType->getComponentTypeByName($contentType->getBaseComponentName());
         $this->baseComponentPathPattern = $this->prepareComponentPathPattern($this->baseComponent);
+        $this->baseComponentPathTokens = $this->discoverTokens($this->baseComponentPathPattern, $this->tokenDelimiter);
     }
 
-    protected function prepareComponentPath($slug, ComponentTypeInterface $component)
+    protected function prepareComponentPath(array $variables, ComponentTypeInterface $component, $lang = null)
     {
         $pathPattern = $this->prepareComponentPathPattern($component);
-        $path = strtr($pathPattern, array($this->slugPlaceholder => $slug));
+
+        $path = strtr($pathPattern, $variables);
         return $path;
     }
 
@@ -100,8 +160,56 @@ class PhpGlobDriver implements DriverInterface
     protected function prepareComponentRegex($componentPath)
     {
         $cleanedPath = str_replace(array('/', '.'), array('\/', '\.'), $componentPath);
-        $regexPattern = str_replace($this->slugPlaceholder, sprintf('(%s)', $this->slugRegex), $cleanedPath);
-        $regexPattern = sprintf('/%s/', $regexPattern);
+
+        foreach($this->baseComponentPathTokens as $tokenName => $tokenPattern)
+        {
+            $cleanedPath = str_replace($tokenPattern, sprintf('(?<%s>%s)', $tokenName, $this->tokenValueRegex), $cleanedPath);
+        }
+
+        $regexPattern = sprintf('/%s/', $cleanedPath);
         return $regexPattern;
+    }
+
+    /**
+     * @param $pattern string
+     * @param $tokenPrefix string
+     * @param $tokenPostfix string
+     * @return string[] Tokens that are within pattern
+     */
+    public function discoverTokens($pattern, $tokenPrefix, $tokenPostfix = null)
+    {
+        $tokenPostfix = (null === $tokenPostfix) ? $tokenPrefix : $tokenPostfix;
+        $regex = sprintf($this->tokenDetectionRegex, $tokenPrefix, $tokenPostfix);
+        $matchingResult = [];
+        $result = preg_match_all($regex, $pattern, $matchingResult);
+
+        if (false === $result)
+        {
+            throw new \RuntimeException(sprintf(
+                'Could not proceed with token detection! Regex matching failed. Regex pattern: "%s". Regex subject: "%s"',
+                $regex, $pattern
+            ));
+        }
+
+        $detectedTokens = $matchingResult[0];
+        $prefixLength = strlen($tokenPrefix);
+        $postfixLength = strlen($tokenPostfix);
+
+        $result = [];
+        foreach($detectedTokens as $tokenWithDelimiter)
+        {
+            $tokenWithoutDelimiter = substr($tokenWithDelimiter, $prefixLength, $postfixLength * -1);
+            $result[$tokenWithoutDelimiter] = $tokenWithDelimiter;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getBaseComponentPathTokens()
+    {
+        return $this->baseComponentPathTokens;
     }
 }
