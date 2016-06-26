@@ -111,9 +111,13 @@ class ContentType implements ContentTypeInterface
         $this->path = $path;
     }
 
-    public function prependBasePath($basePath)
+    /**
+     * @param string $basePath
+     * @return $this
+     */
+    public function prependPath($basePath)
     {
-        $this->path = rtrim($basePath, '/') . '/' . ltrim($this->path, '/');
+        $this->path = rtrim($basePath, '/') . '/' . trim($this->path, '/');
         return $this;
     }
 

@@ -23,6 +23,11 @@ interface ContentTypeInterface
     public function setPath($path);
 
     /**
+     * @param string $pathPrefix
+     */
+    public function prependPath($pathPrefix);
+    
+    /**
      * @return ComponentTypeInterface[]
      */
     public function getComponentTypes();
