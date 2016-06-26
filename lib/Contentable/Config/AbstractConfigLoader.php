@@ -47,7 +47,7 @@ abstract class AbstractConfigLoader implements ConfigLoaderInterface
         return $contentType;
     }
 
-    public function parseContentTypeConfig(array & $rawData, $contentTypeName)
+    public function parseContentTypeConfig(array $rawData, $contentTypeName)
     {
         $type = new ContentType();
         $type->setName($contentTypeName);
@@ -58,7 +58,7 @@ abstract class AbstractConfigLoader implements ConfigLoaderInterface
         return $type;
     }
 
-    public function parseComponentTypeConfig(array & $rawData, $componentName)
+    public function parseComponentTypeConfig(array $rawData, $componentName)
     {
         $typeName = $this->getOptionalKey($rawData, 'type', 'string');
         $component = new ComponentType();
@@ -110,7 +110,7 @@ abstract class AbstractConfigLoader implements ConfigLoaderInterface
     }
 
 
-    public function parseFieldTypesConfig(array & $rawData, $fieldTypeName)
+    public function parseFieldTypesConfig(array $rawData, $fieldTypeName)
     {
         $field = new FieldType();
         $field->setName($fieldTypeName);
@@ -119,7 +119,7 @@ abstract class AbstractConfigLoader implements ConfigLoaderInterface
         return $field;
     }
 
-    public function parseConfigItems(array & $rawData, array $callback)
+    public function parseConfigItems(array $rawData, array $callback)
     {
         $parsedItems = array();
 
@@ -131,7 +131,7 @@ abstract class AbstractConfigLoader implements ConfigLoaderInterface
         return $parsedItems;
     }
 
-    protected function getKey(array & $config, $key, $expectedType = null)
+    protected function getKey(array $config, $key, $expectedType = null)
     {
         if (!isset($config[$key]))
         {
@@ -158,7 +158,7 @@ abstract class AbstractConfigLoader implements ConfigLoaderInterface
         return $value;
     }
 
-    protected function getOptionalKey(array & $config, $key, $expectedType = null, $defaultValue = null)
+    protected function getOptionalKey(array $config, $key, $expectedType = null, $defaultValue = null)
     {
         if (!isset($config[$key]))
         {
@@ -182,7 +182,7 @@ abstract class AbstractConfigLoader implements ConfigLoaderInterface
         return $value;
     }
 
-    protected function isValueTypeValid(& $value, $expectedType)
+    protected function isValueTypeValid($value, $expectedType)
     {
         $type = is_object($value) ? get_class($value) : gettype($value);
 
